@@ -115,7 +115,7 @@ if st.button("💡 Predict Loan Approval"):
     )
 
     with st.expander("See Details"):
-        st.dataframe(df.style.highlight_max(axis=1, color="lightgreen"))
+        st.dataframe(df)
 
     # PDF Report Generator using original inputs
     def create_pdf(original_inputs, prediction_result):
@@ -169,3 +169,4 @@ else:
         "<p style='text-align:center; color:gray;'>👈 Fill out the details and hit Predict!</p>",
         unsafe_allow_html=True,
     )
+
