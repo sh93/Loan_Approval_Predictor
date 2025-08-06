@@ -43,7 +43,7 @@ inputs = {
     ),
 }
 
-df = pd.DataFrame([inputs])
+df = pd.DataFrame([inputs])  # Keep original for PDF
 
 # Manual Encoding
 encoding_maps = {
@@ -56,8 +56,10 @@ encoding_maps = {
     "Property_Area": {"Urban": 2, "Semiurban": 1, "Rural": 0},
 }
 
+encoded_df = df.copy()
+
 for col, mapping in encoding_maps.items():
-    df[col] = df[col].map(mapping)
+    encoded_df[col] = encoded_df[col].map(mapping)
 
 # Scaling
 scaling_values = {
@@ -68,7 +70,7 @@ scaling_values = {
 }
 
 for col, (min_val, max_val) in scaling_values.items():
-    df[col] = (df[col] - min_val) / (max_val - min_val)
+    encoded_df[col] = (encoded_df[col] - min_val) / (max_val - min_val)
 
 # Charts
 st.subheader("📊 Income Distribution")
@@ -90,12 +92,11 @@ else:
     pie_values = [inputs["ApplicantIncome"], inputs["CoapplicantIncome"]]
     pie_labels = ["Applicant", "Coapplicant"]
 
-    # Filter out zero values to avoid NaNs or plotting errors
     filtered_data = [
         (label, value) for label, value in zip(pie_labels, pie_values) if value > 0
     ]
 
-    if filtered_data:  # Only plot if there's at least one non-zero value
+    if filtered_data:
         labels, values = zip(*filtered_data)
         fig, ax = plt.subplots()
         ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
@@ -104,10 +105,9 @@ else:
     else:
         st.warning("📌 Cannot plot pie chart because all income values are zero.")
 
-
 # Predict and Display
 if st.button("💡 Predict Loan Approval"):
-    prediction = model.predict(df)[0]
+    prediction = model.predict(encoded_df)[0]
     result = "✅ Loan Approved" if prediction == 1 else "❌ Loan Not Approved"
     st.markdown(
         f"<h3 style='text-align:center; color:#006d77;'>Prediction: {result}</h3>",
@@ -117,8 +117,8 @@ if st.button("💡 Predict Loan Approval"):
     with st.expander("See Details"):
         st.dataframe(df.style.highlight_max(axis=1, color="lightgreen"))
 
-    # PDF Report Generator
-    def create_pdf(dataframe, prediction_result):
+    # PDF Report Generator using original inputs
+    def create_pdf(original_inputs, prediction_result):
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
         styles = getSampleStyleSheet()
@@ -135,8 +135,8 @@ if st.button("💡 Predict Loan Approval"):
         elements.append(Spacer(1, 12))
 
         table_data = [["Feature", "Value"]]
-        for col in dataframe.columns:
-            table_data.append([col, f"{dataframe[col].values[0]:.4f}"])
+        for key, value in original_inputs.items():
+            table_data.append([key, str(value)])
 
         table = Table(table_data, colWidths=[200, 200])
         table.setStyle(
@@ -156,7 +156,7 @@ if st.button("💡 Predict Loan Approval"):
         buffer.seek(0)
         return buffer
 
-    pdf = create_pdf(df, result)
+    pdf = create_pdf(inputs, result)
     st.download_button(
         label="📥 Download PDF Report",
         data=pdf,
